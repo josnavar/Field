@@ -13,9 +13,14 @@ class StayClose(Field):
         self.populateObstacles(16,2)
         self.spawnAgents(radius,numAgents)
         self.mapShow=np.asarray(self.map)
+
+        #Unused field maxLength
         self.maxLength = 0
+        #Precomputed optimal paths
         self.paths={}
         self.leaderId=[0]
+
+        #For lag
         self.currentStep={}
         self.radius=20
 
@@ -49,8 +54,12 @@ class StayClose(Field):
                     newX,newY=path[i]
 
                 #Update tiles
-                if self.mapShow[newX,newY]>=4 and (newX,newY)!=path[-1]:
 
+                # No need to check for obstacles since (newX,newY) has the invariant of being a tile along the BFS path.
+                #The only thing that changes is other agents that may block the way hence only need to check for other
+                #agents hence the >=4 according to the protocol.
+                if self.mapShow[newX,newY]>=4 and (newX,newY)!=path[-1]:
+                    # This is a hack so it doesn't get stuck in the beginning
                     if self.mapShow[newX,newY]!=agent:
                         if agent in self.currentStep:
                             self.currentStep[agent]+=1

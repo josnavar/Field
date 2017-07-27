@@ -39,6 +39,7 @@ class BFSHeuristic(Field):
             # to take this into account increase the lag (since the animation increases i monotonically)
             #i is the index accessed into the BFS path solution
             if agent in self.currentStep:
+
                 lag=self.currentStep.get(agent)
                 newX,newY=path[i-lag]
             else:
@@ -46,6 +47,7 @@ class BFSHeuristic(Field):
 
             #Check if next tile is empty, if it is move to it. O.W wait in current Location.
             if self.mapShow[newX,newY]>=4 and (newX,newY)!=path[-1]:
+                #This is a hack so it doesn't get stuck in the beginning
                 if self.mapShow[newX,newY]!=agent:
                     #Do nothing increase the lag
                     if agent in self.currentStep:
