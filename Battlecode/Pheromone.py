@@ -13,46 +13,41 @@ class Pheromone(Field):
     idToTile = {0: (0, 1), 1: (-1, 1), 2: (-1, 0), 3: (-1, -1), 4: (0, -1),
                    -1: (1, 1), -2: (1, 0), -3: (1, -1), -4: (0, -1)}
     adjacentSet={0:0,1:0,-1:0}
+    # generates all possible adjacent combinations
+    adjacent=Field.generateCombinations([adjacentSet,adjacentSet],{0,0})
     def __init__(self,x,y,numAgents,radius,decayRate,incrementRate,d):
         Field.__init__(self,x,y,numAgents)
         self.populateObstacles(16,2)
         self.spawnAgents(radius,numAgents)
         self.mapShow=np.asarray(self.map)
+        #spread radius
         self.d=d
         self.incrementRate=incrementRate
         self.decayRate=decayRate
 
-
-        # Each agent remembers where it has been, don't go back to these.
-        #maps from agent to dictionary of moved locations
-        self.heatMap=np.zeros((self.x,self.y))
-
-        #generates all possible adjacent combinations
-        self.adjacent=Pheromone.generateCombinations([Pheromone.adjacentSet,Pheromone.adjacentSet],{(0,0)})
-
         # Represents the matrix of pheromone intensity of agents
         self.pheromoneIntensity=np.zeros((x,y))
-        #pheromone maps from location to 4-tuple of (direction,leader boolean,indexOfGoal,distanceToGoal
+        #pheromone maps from location to 4-tuple of (direction,leader boolean,indexOfGoal,distanceToGoal)
         self.pheromoneDirection={}
-
+        # Matrix of directions
+        self.heatMap = np.zeros((self.x, self.y))
 
         self.leaderId=[0]
+        self.leaderLoc = (0, 0)
+        #index of the path
         self.path=[]
-        #Which index in path are we in
         self.index=0
-        self.leaderLoc=(0,0)
+
         #For leader lag, maps from id to lag
         self.currentStep={}
-    #Returns sorted list of valid adjacent neighbors based on their pheromone value
+    #Returns shuffled list of valid adjacent neighbors based on their pheromone value
     #shouldn't be in banned
     def checkPheromone(self,current,banned):
         eltx=current[0]
         elty=current[1]
-
         #List of tuples of the form (tile,pheromoneValue)
         validMoves=[]
-
-        for elt in self.adjacent:
+        for elt in Pheromone.adjacent:
             newLoc= (eltx+elt[0],elty+elt[1])
             if (newLoc[0]>=0 and newLoc[0]<self.x) and (newLoc[1]>=0 and newLoc[1]<self.y):
                 tileValue=self.mapShow[newLoc[0],newLoc[1]]
@@ -60,7 +55,6 @@ class Pheromone(Field):
                 if tileValue<4 and tileValue!=1 and pheromoneValue>0 and newLoc not in banned:
                     validMoves.append((newLoc,pheromoneValue))
         shuffle(validMoves)
-
         return validMoves
     #Used by spreadPheromones to generate tiles that are compatible w/ pheromones (none-obstacles)
     def validPheromoneLocations(self,current):
@@ -68,12 +62,11 @@ class Pheromone(Field):
         eltx=current[0]
         elty=current[1]
 
-        for elt in self.adjacent:
+        for elt in Pheromone.adjacent:
             newLoc=(eltx+elt[0],elty+elt[1])
             if (newLoc[0]>=0 and newLoc[0]<self.x) and (newLoc[1]>=0 and newLoc[1]<self.y) and self.mapShow[newLoc[0],newLoc[1]]!=1:
                 validMoves.append(newLoc)
         return validMoves
-
     #Angle in radians -pi<x<pi
     #Returns the adjacent tile that was point to
     @staticmethod
@@ -85,26 +78,25 @@ class Pheromone(Field):
             index=math.ceil(8*angle/math.pi)
             index=int(round(index/2.0))
         tileDifference=Pheromone.idToTile.get(index)
-
         return (currentTile[0]+tileDifference[0],currentTile[1]+tileDifference[1])
     #start and end are 2tuples, outputs the direction in radians from start to end.
     @staticmethod
     def dirFromTo(start,end):
         xdiff=end[0]-start[0]
         ydiff=end[1]-start[1]
-
         return -math.atan2(xdiff,ydiff)
     #Mutates the pheromones directions and intensities
     def updatePheromone(self,old,new,leader):
-
+        direction = Pheromone.dirFromTo(old, new)
         if leader:
-            direction=Pheromone.dirFromTo(old,new)
             self.pheromoneDirection[old]=(direction,leader,self.index,1)
             self.pheromoneIntensity[old[0],old[1]]=self.incrementRate
             self.heatMap[old[0],old[1]]=int(math.degrees(direction)+360)%360
         else:
-            #TODO:Complete once leader is done
-            pass
+            currentDistance=self.pheromoneDirection.get(new)[-1]+1
+            self.pheromoneDirection[old]=(direction,leader,self.index,currentDistance)
+            self.pheromoneIntensity[old[0],old[1]]=self.incrementRate
+            self.heatMap[old[0],old[1]]=int(math.degrees(direction)+360)%360
 
     #Used by spreadPheromones, should only spread to empty locations
     #leader is boolean if agent spreading is a leader
@@ -135,11 +127,9 @@ class Pheromone(Field):
                 r = self.pheromoneIntensity[source[0], source[1]] #/ 2
                 self.pheromoneIntensity[current[0],current[1]]=r
         elif self.pheromoneIntensity[current[0],current[1]]==0:
-            pass
-            #TODO: AFTER LEADER IS DONE
-            #update if empty
+            currentDistance=self.pheromoneDirection.get(source)[-1]+1
             direction = self.dirFromTo(current, source)
-            self.pheromoneDirection[current] = (direction, leader)
+            self.pheromoneDirection[current] = (direction, leader,self.index,currentDistance)
             self.heatMap[current[0], current[1]] = int(math.degrees(direction) + 360) % 360
             r = self.pheromoneIntensity[source[0], source[1]] #/ 2
             self.pheromoneIntensity[current[0], current[1]] = r
@@ -165,7 +155,6 @@ class Pheromone(Field):
                 self.reversePheromones(elt,u,leader)
     #Main iterative function determines the animation for each i'th step
     def iterate(self,i):
-        #print self.pheromoneDirection
         global clickDelay
         global paused
         if paused:
@@ -177,29 +166,17 @@ class Pheromone(Field):
             self.leaderId[0]=random.randint(4,3+self.numAgents)
             id=self.leaderId[0]
             #Find optimal path for the current leader
-
             self.path=self.bfsSP(self.agents.get(id),(self.targetx,self.targety))
+        print self.path
 
-
-        #Pheremones are present in each entry of the array and they are composed of a vector with r="intensity" and theta="dir"
-
-
-        #Update the pheromone levels. Pheromone levels are "reals" from 0 to 1 inclusive that decay per round. Decay acts on r
-        #The decay rate can be any none decreasing function (TODO consider more functions)
-        #For now we will use linear decay rate.
-
-        #Apply the pheromone decay; How to maintain a minimum and max bounds?->Use clip function
-        #decay=self.decayRate*np.ones((self.x,self.y))
         self.pheromoneIntensity=np.clip(self.pheromoneIntensity,0,1)
 
         for agent in self.agents:
-
             locX,locY=self.agents.get(agent)
             ##################Agent=Leader###################################
             #Action for the leader, essentially BFS heuristic but only for leader, refer to BFS.py
             # Leader continues along its single optimal route
             if agent==self.leaderId[0]:
-
                 #reached target
                 if (locX,locY)==self.path[-1]:
                     continue
@@ -236,8 +213,6 @@ class Pheromone(Field):
                 #Chooses direction based on strongest pheromone trail. What if no none-zero adjacent pheromone levels?
                 #Temporary solution: Pheromones spread out a certain distance, follows do random walks until they find something
                 #Assumptions: The herd has a common point of creation hence distance from herd to pheromone locations are minimal
-
-
                 locations = self.checkPheromone((locX,locY),{})
                 validMovements=self.checkEmpty(locX,locY,True,self.mapShow)
                 sameTile=False
@@ -252,6 +227,8 @@ class Pheromone(Field):
                     #GO to pheromone
                     biggestPheromone=locations[0][0]
                     newX,newY=biggestPheromone
+                    #self.updatePheromone((locX,locY),(newX,newY),False)
+                    self.spreadPheromones((newX,newY),self.d,False)
 
                 elif not sameTile:
                     if len(validMovements)>0:
@@ -268,10 +245,7 @@ class Pheromone(Field):
 
         consider=np.concatenate((self.mapShow,self.heatMap),axis=1)
         return plt.imshow(consider,interpolation="nearest",animated=True,cmap="Paired"),
-
-
-
-instance=Pheromone(50,50,15,3,0.08,0.95,4)
+instance=Pheromone(100,100,15,3,0.08,0.95,4)
 count=0
 def clickEvent(event):
     global count
@@ -287,11 +261,6 @@ def clickEvent(event):
             paused=False
             count=0
 instance.fig.canvas.mpl_connect("button_press_event",clickEvent)
-anim=matplotlib.animation.FuncAnimation(instance.fig,instance.iterate,blit=True,interval=100,frames=100,repeat=False)
-
-
-
+anim=matplotlib.animation.FuncAnimation(instance.fig,instance.iterate,blit=True,interval=100,frames=50,repeat=False)
 plt.show(anim)
-#anim.save("trouble.mp4")
-
-
+#anim.save("nuts.mp4")
