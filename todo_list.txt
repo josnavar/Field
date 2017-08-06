@@ -1,0 +1,5 @@
+figure out symmetry in map to reduce memory usage
+    - how to deal with enemies clearing obstacles
+    - how to figure out what symmetry in map (need global view)
+
+
