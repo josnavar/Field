@@ -20,7 +20,7 @@ class Field:
         self.x=x
         self.y=y
         self.numAgents=numAgents
-        self.map=[[0 for a in range(x)] for b in range(y)]
+        self.map=[[0 for a in range(y)] for b in range(x)]
 
         self.startx=random.randint(0,x-1)
         self.starty=random.randint(0,y-1)
@@ -58,6 +58,8 @@ class Field:
         """
         for eltx in range(self.x):
             for elty in range(self.y):
+                if eltx==self.targetx and elty==self.targety:
+                    continue
                 numOfNeib=self.checkObstacles(eltx,elty)
                 probOfObs=1.0/ (w+w0*numOfNeib)
                 if (random.random()<probOfObs):
@@ -139,6 +141,7 @@ class Field:
         for elt in self.agentLocations:
             xLoc,yLoc=elt
             self.map[xLoc][yLoc]=self.agentLocations.get(elt)
+
     #TODO: NEEDS TO FAIL GRACEFULLY IF NO SOLN
     def bfsSP(self,start,target):
         """
@@ -179,16 +182,3 @@ class Field:
 
         path.reverse()
         return path[1:]
-
-
-
-
-
-
-
-
-
-
-
-
-
