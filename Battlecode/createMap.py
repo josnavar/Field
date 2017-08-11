@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation
 import math
-
+import random
 class createMap(object):
     fig = plt.figure()
     #Symmetry is an integer and represents the following protocols:
@@ -19,11 +19,26 @@ class createMap(object):
         self.received_click=False
         self.clicked_x=-1
         self.clicked_y=-1
+
+        self.startx=random.randint(0,self.sizeX-1)
+        self.starty=random.randint(0,self.sizeY-1)
+
+        self.targetx=self.sizeX-int(self.startx*random.random())-1
+        self.targety=self.sizeY-int(self.starty*random.random())-1
+
+        #start,end tuples with dimensions (x,y)
+        self.destination=np.zeros(4)
+        self.destination[0]=self.startx
+        self.destination[1]=self.starty
+        self.destination[2]=self.targetx
+        self.destination[3]=self.targety
+
         self.board=np.zeros((sizeX,sizeY))
+        self.board[self.startx,self.starty]=2
+        self.board[self.targetx,self.targety]=3
 
     #animation function that will handle updating canvas called by funcAnimator
     def iterate(self,i):
-        print (self.received_click)
         if self.received_click:
             self.updateCanvas()
             self.received_click=False
@@ -50,7 +65,7 @@ class createMap(object):
         self.board[self.clicked_x,self.clicked_y]=1
         self.board[symmetricX,symmetricY]=1
 
-instance=createMap(100,100,0)
+instance=createMap(75,100,1)
 def clickEvent(event):
 
     #right click
@@ -61,5 +76,7 @@ def clickEvent(event):
 instance.fig.canvas.mpl_connect("button_press_event",clickEvent)
 anim=matplotlib.animation.FuncAnimation(instance.fig,instance.iterate,blit=True,interval=50,frames=1000,repeat=False)
 plt.show(anim)
+np.save("board2",instance.board)
+np.save("info2",instance.destination)
 
 

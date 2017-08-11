@@ -16,7 +16,7 @@ class Pheromone(Field):
     # generates all possible adjacent combinations
     adjacent=Field.generateCombinations([adjacentSet,adjacentSet],{0,0})
     def __init__(self,x,y,numAgents,spawn_radius,decayRate,incrementRate,spread_radius):
-        Field.__init__(self,x,y,numAgents)
+        Field.__init__(self,x,y,numAgents,"board2.npy","info2.npy")
         self.populateObstacles(16,2)
         self.spawnAgents(spawn_radius,numAgents)
         self.mapShow=np.asarray(self.map)
@@ -196,9 +196,6 @@ class Pheromone(Field):
             #Action for the leader, essentially BFS heuristic but only for leader, refer to BFS.py
             # Leader continues along its single optimal route
             if agent==self.leaderId[0]:
-                print self.path
-                print (self.targetx,self.targety)
-                print (self.startx,self.starty)
                 if i==self.previous_index:
                     continue
                 else:
@@ -264,7 +261,7 @@ class Pheromone(Field):
         #consider=np.concatenate((self.mapShow,self.heatMap),axis=1)
         #heatmap is for debugging pheromone
         return plt.imshow(self.mapShow,interpolation="nearest",animated=True,cmap="Paired"),
-instance=Pheromone(100,100,15,3,0.08,0.95,4)
+instance=Pheromone(75,100,15,3,0.08,0.95,4)
 count=0
 def clickEvent(event):
     global count
@@ -282,3 +279,4 @@ def clickEvent(event):
 instance.fig.canvas.mpl_connect("button_press_event",clickEvent)
 anim=matplotlib.animation.FuncAnimation(instance.fig,instance.iterate,blit=True,interval=100,frames=100,repeat=False)
 plt.show(anim)
+#anim.save("sample.mp4")
